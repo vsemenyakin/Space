@@ -8,3 +8,5 @@ if exist %keys_folder_name% (
   %openssl_path% genrsa -aes128 -out %keys_folder_name%\private.pem 1024
   %openssl_path% rsa -in %keys_folder_name%\private.pem -pubout > %keys_folder_name%\public.pem
 )
+----------------------------------------------------------------------------------------
+set /p DUMMY=Press ENTER to close...

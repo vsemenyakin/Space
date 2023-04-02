@@ -11,3 +11,5 @@ for %%a in (%filter%) do (
 )
 popd
 endlocal
+----------------------------------------------------------------------------------------
+set /p DUMMY=Press ENTER to close...
