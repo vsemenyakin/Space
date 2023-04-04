@@ -8,6 +8,7 @@ Rem ----------------------------------------------------------------------------
 set full_review_revisions_file_name=%review_folder_name%/%review_revisions_file_name%
 set full_review_commits_file_name=%review_folder_name%/%review_commits_file_name%
 Rem ----------------------------------------------------------------------------------------
+git -C ./%data_base_folder_name% fetch --all
 if exist %data_base_folder_name% (
   git -C ./%data_base_folder_name% rev-list master..origin/master > %full_review_revisions_file_name%
   for /F "tokens=*" %%A in (%full_review_revisions_file_name%) do (

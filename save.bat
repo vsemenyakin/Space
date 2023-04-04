@@ -13,7 +13,7 @@ if exist ./%data_base_folder_name% (
   git -C ./%data_base_folder_name% commit -m "%message%"
   git -C ./%data_base_folder_name% push origin master
 ) else (
-   echo "No base folder exist!"
+   msg %username% "No base folder exist!"
 )
 Rem ----------------------------------------------------------------------------------------
 set /p DUMMY=Press ENTER to close...
