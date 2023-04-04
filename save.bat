@@ -1,8 +1,8 @@
 set /p message=Enter commit message: 
 Rem ----------------------------------------------------------------------------------------
-call vars.bat
+call ./_/vars.bat
 Rem ----------------------------------------------------------------------------------------
-call setup_git_local.bat
+call ./_/setup_git_local.bat
 Rem ----------------------------------------------------------------------------------------
 if exist ./%data_base_folder_name% (
   if NOT exist ./%data_base_folder_name%/.git (

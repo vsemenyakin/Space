@@ -1,6 +1,6 @@
-call vars.bat
+call ./_/vars.bat
 Rem ----------------------------------------------------------------------------------------
-call setup_git_local.bat
+call ./_/setup_git_local.bat
 Rem ----------------------------------------------------------------------------------------
 git -C %data_base_folder_name% remote add restore-remote %restore_repository_path%
 git -C %data_base_folder_name% checkout -b restore-branch/%user_name%
