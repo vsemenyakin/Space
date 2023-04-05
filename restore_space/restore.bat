@@ -19,7 +19,7 @@ if exist %local_restore_repo_folder_name% (
   rd /S /Q %local_restore_repo_folder_name%
 )
 mkdir %local_restore_repo_folder_name%
-git -C ./%local_restore_repo_folder_name% clone %restore_repository_path%
+git -C ./%local_restore_repo_folder_name% clone %restore_repository_path% .
 Rem ----------------------------------------------------------------------------------------
 endlocal
 Rem ----------------------------------------------------------------------------------------
