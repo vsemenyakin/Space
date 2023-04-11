@@ -1,7 +1,7 @@
 Rem ---| Variables |---
 set restore_folder_name=.
 set local_restore_repo_folder_name=__restore_repo__
-set restore_repository_path=https://github.com/vsemenyakin/SilenceWarlord_Resotre.git
+set restore_repository_path=!!!Enter restore URL here!!!
 Rem ----------------------------------------------------------------------------------------
 call ./_/setup_git_local.bat
 Rem ----------------------------------------------------------------------------------------
