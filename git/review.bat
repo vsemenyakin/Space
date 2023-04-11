@@ -1,6 +1,6 @@
-call ./_/vars.bat
+call ../_/vars.bat
 Rem ----------------------------------------------------------------------------------------
-call ./_/setup_git_local.bat
+call ../_/setup_git_local.bat
 Rem ----------------------------------------------------------------------------------------
 if exist %review_folder_name% (
   rd /S /Q %review_folder_name%

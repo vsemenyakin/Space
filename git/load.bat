@@ -1,6 +1,6 @@
-call ./_/vars.bat
+call ../_/vars.bat
 Rem ----------------------------------------------------------------------------------------
-call ./_/setup_git_local.bat
+call ../_/setup_git_local.bat
 Rem ----------------------------------------------------------------------------------------
 if exist %data_base_folder_name% (
   git -C ./%data_base_folder_name% pull origin master
