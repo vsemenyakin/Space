@@ -1,380 +1,385 @@
-# For file actions
-import os 
-import shutil
-import math
+
+import os #for os.getcwd()
+
+# Custom modules
+import sys
+sys.path.insert(0, '../_/python_utils')
+sys.path.insert(0, '_')
+
+from osint_sourceSettings_in import formSourceSettingsForInputFSItem
+
+#for tests
 import datetime 
+from osint_sourceSettings_in import SETSourceSettings
+from osint_sourceSettings_out import formSourceLines
 
-# For executable call
-import subprocess
+from osint_sourceSettings_out import formSourceRangeFrames
 
-# stringWithPossibleArguments : string
-def excludeRawArguments(stringWithPossibleArguments):
-  argumentsStart = stringWithPossibleArguments.find('@')
-  
-  if argumentsStart == -1:
-    return None
-  
-  argumentsEnd = stringWithPossibleArguments.find('@', argumentsStart + 1)
-  if argumentsEnd == -1:
-    return None
+from osint_pathUtils import getPathFromWhichProcessIsCalled
+from osint_pathUtils import getFSItemName
 
-  argumentsString = stringWithPossibleArguments[argumentsStart+1:argumentsEnd]
-  
-  unstrippedRawArguments = argumentsString.split('_')
-  return [unstrippedRawArgument.strip() for unstrippedRawArgument in unstrippedRawArguments]
+from osint_fileUtils import mkDirSafe
+from osint_fileUtils import openTextFileForWrite
 
-def stringWithoutArguments(stringWithPossibleArguments):
-  
-  #Just find first "@" symbols
-  argumentsStart = stringWithPossibleArguments.find('@')
-  if argumentsStart == -1:
-    return stringWithPossibleArguments
-  
-  argumentsEnd = stringWithPossibleArguments.find('@', argumentsStart + 1)
-  if argumentsStart == -1:
-    return stringWithPossibleArguments
-  
-  return stringWithPossibleArguments[argumentsEnd+1:len(stringWithPossibleArguments)].lstrip()
+from osint_fileSystemChangesTracking import loadOrMakeFSMeta
+from osint_fileSystemChangesTracking import saveFSMeta
 
-# ==============================
-class Int:
-  def __init__(self, value):
-    self.value = value
+# ========================= Form data for investigations =================================
 
-  value = 0
-
-def parseInt(string):
-  result = None
+def getInvestigationsPathsInDir(dir__investigations__path):
+  # Currently we make no checks here, just assumes
   
-  try:
-    result = Int(int(string))
-  except:
-    result = None
+  #TODO: Make checks here
+
+  result = []
+
+  for fsItem__investigation__name in os.listdir(dir__investigations__path):
+    fsItem__investigation__path = os.path.join(\
+      dir__investigations__path, fsItem__investigation__name)
+
+    if not os.path.isdir(fsItem__investigation__path):
+      #Print Warning here: unexcepeted file in investigations directory
+      continue
+    dir__investigation__path = fsItem__investigation__path
+    
+    result.append(dir__investigation__path)
   
   return result
 
-# ------------------------------
-# Constructs "OptionalInt" from
-# string
-#
-# [string : string]
-#   string to parse value from
-#
-# [{ret} : datetime.timedelta]
-#   
-# ------------------------------
-def parseTime(string):
-
-  # Special case for seconds single value
-
-  try:
-    seconds__int = int(string)
-    return datetime.timedelta(seconds = seconds__int)
-  except:
-    # No return here - because this may be other format
-    pass
-
-  # Parse using time patterns
-  supported_patterns = ["^%-M:%-S"]
-  for supported_pattern in supported_patterns:
-      try:
-        result__datetime_time = datetime.datetime.strptime(string, supported_pattern)
-        return datetime.timedelta(\
-          hours = result__datetime_time.hour,\
-          minutes = result__datetime_time.minute,\
-          seconds = result__datetime_time.second)
-      except:
-          pass
+def formSource_sourceText(settings, dir__output__path):
   
-  return None
+  # Prepare directory for source
+  
+  dir__output_source__name = settings.name
+  dir__output_source__path = os.path.join(dir__output__path, dir__output_source__name)
+  
+  mkDirSafe(dir__output_source__path)
 
-# ==============================
+  # Print source text
+  
+  sourceLines = formSourceLines(settings)
 
-class TimeRange:
-  def __init__(self):
-    self.begin = None  # assumed to be "datetime.timedelta"
-    self.end = None    # assumed to be "datetime.timedelta" 
+  file__output_source_lines__name = "source.txt"
+  file__output_source_lines__path = os.path.join(dir__output_source__path, file__output_source_lines__name)
 
-# ------------------------------
-# Constructs range from string
-#
-# [string : string]
-#   string to parse value from
-#
-# [{ret} : IntRange]
-#   range if it was succefully
-#   created or "None" otherwise
-# ------------------------------
-def parseRangesFromRawArgument(rawArgument):
+  file__output_source_lines__fileObject = openTextFileForWrite(file__output_source_lines__path)
+  for sourceLine in sourceLines:
+    file__output_source_lines__fileObject.write(sourceLine)
+    file__output_source_lines__fileObject.write("\n")
 
-  rangeDelimiterSymbol = '-'
+def formSource_frames(settings, dir__output__path):
+  
+  rangeStart = datetime.timedelta()
+  
+  for cutTime in settings.cutTimes:
+    
+    rangeEnd = cutTime
+    
+    formSourceRangeFrames(settings.contentPath, dir__output_source__path,\
+      rangeStart, rangeEnd, settings.contentStep)
+    
+    rangeStart = rangeEnd
 
+  rangeEnd = settings.getContentDuration()
+
+  formSourceRangeFrames(settings.contentPath, dir__output_source__path,\
+    rangeStart, rangeEnd, settings.contentStep)
+
+def formInvestigationOutput(dir__investigation__path, dir__output__path):
+
+  investigationName = getFSItemName(dir__investigation__path)
+
+  dir__output_investigation__path = os.path.join(dir__output__path, investigationName)
+  mkDirSafe(dir__output_investigation__path)
+
+  for fsItem__investigation_source___name in os.listdir(dir__investigation__path):
+    fsItem__investigation_source___path = os.path.join(\
+      dir__investigation__path, fsItem__investigation_source___name)
+                
+    formSourceOutput(fsItem__investigation_source___path, dir__output_investigation__path)
+
+## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+class OSINT_UpdateSettings_Investigation_Source:
+
+  def __init__(self,\
+    settingsIn, dir__output__path,\
+    shouldUpdate_sourceText, shouldUpdate_frames,\
+    updateCauseString):
+      
+    self.settingsIn = settingsIn
+    self.dir__output__path = dir__output__path
+    
+    self.shouldUpdate_sourceText = shouldUpdate_sourceText
+    self.shouldUpdate_frames = shouldUpdate_frames    
+  
+    self.updateCauseString = updateCauseString
+  
+  # Return if updated took place as planed
+  def performUpdate(self):
+    
+    if not self.shouldUpdate_sourceText and not self.shouldUpdate_frames:
+      #WARNING: Useless settings
+      return True
+    
+    if self.shouldUpdate_sourceText:
+      localSuccess = formSource_sourceText(settingsIn, self.dir__output__path)
+      if not localSuccess:
+        return False
+    
+    if self.shouldUpdate_frames:
+      localSuccess = formSource_frames(settingsIn, self.dir__output__path)    
+      if not localSuccess:
+        return False    
+
+    return True
+
+
+class OSINT_UpdateSettings_Investigation:
+
+  def __init__(self, name, sourceUpdateSettings, updateCauseString):
+    self.name = name
+    self.sourceUpdateSettings = sourceUpdateSettings
+    
+    self.updateCauseString = updateCauseString
+
+# ********************************************
+
+def getInvestigationMetaOutByIn(dir__in_investigation__meta, dir__out__meta):
+  
+  investigationName = dir__in_investigation__meta.getName()
+
+  for fsItem__out_investigation__meta in dir__out__meta.items:
+    
+    if isinstance(fsItem__out_investigation__meta, FSMeta_file):
+      #WARNING: Unexpected file in investigations OUT folder
+      # Just actualize info about it
+      continue
+    dir__out_investigation__meta = fsItem__out_investigation__meta
+  
+    if dir__out_investigation__meta.getName() == investigationName
+      return (dir__out_investigation__meta, dir__out_investigation__meta.getPath())
+
+  out_path = os.path.join(dir__out__meta.getPath(), investigationName)
+  return (None, out_path)
+
+# ********************************************
+
+def formSourcesUpdateSettings_prepareFullInvestigationUpdate(\
+  dir__investigationIn__meta, dir__investigationOut__path):
+
+  # In was added - so no existing output is expected. Remove existing
+  # directory before update
+  rmDirSafe(dir__investigationOut__path)
+  
   result = []
   
-  if rangeDelimiterSymbol in rawArgument:
-    # We assume that this is single-range argument
+  for fsItem__investigationIn_source__meta in dir__investigationIn__meta.items:
+  
+    settingsIn = formSourceSettingsForInputFSItem(fsItem__investigationIn_source__meta.getPath())
+    
+    if settingsIn == None:
+      #WARNING: Cannot create settings for source input
+      continue
+    
+    sourceUpdateSetting = OSINT_UpdateSettings_Investigation_Source(\
+      settingsIn, dir__investigationOut__path,\
+      shouldUpdate_sourceText = True, shouldUpdate_frames = True,\
+      updateCauseString = "Investigation added")
+    
+    result.append(sourceUpdateSetting)
+  
+  return result
 
-    possibleRangeLimitStrings = string.split('-')
-    if len(possibleRangeLimitStrings) != 2:
-      return None
-    
-    possibleBegin = parseTime(possibleRangeLimitStrings[0].strip())
-    if possibleBegin == None:
-      return None
-            
-    possibleEnd = parseTime(possibleRangeLimitStrings[1].strip())
-    if possibleEnd == None:
-      return None    
-    
-    singleRange = TimeRange()
-    singleRange.begin = possibleBegin
-    singleRange.end = possibleEnd
-    result.append(singleRange)
-    
-  else:
-    # We assume that this range-sequence
+# "dir__investigationOut" is passed for cause when no meta is exist
+def formSourcesUpdateSettings(dir__investigationIn__meta, dir__investigationOut__meta, dir__investigationOut__path):
 
-    # Split sequence by whitespaces: [https://stackoverflow.com/a/8113787]
-    times__string = rawArgument.split()
+#class EFSMetaItemStatus(Enum):
+#  Actual = 1
+#  Added = 2
+#  Changed = 3
+#  Removed = 4
+
+  status = dir__investigationIn__meta.getStatus()
+
+  if status == EFSMetaItemStatus.Actual:
+
+    # Out is unchanged too. No changes are needed    
+    if dir__investigationOut__meta != None and outStatus == EFSMetaItemStatus.Actual:
+      return []
+  
+    fullUpdateCause = None    
+    if dir__investigationOut__meta != None:
     
-    # Convert times to "datetime.timedelta"
-    times = []
-    
-    for time__string in times__string:
-      possbileTime = parseTime(time__string)
-      if possbileTime == None:
-        return None
+      outStatus = dir__investigationOut__meta.getStatus()
         
-      times.append(possbileTime)
-
-    # Form sequenced ranges
-    currentStartTime = None
-    
-    for time in times:
-            
-      currentRange = TimeRange()
-      currentRange.begin = currentStartTime
-      currentRange.end = time
-
-      result.append(currentRange)
+      if outStatus == EFSMetaItemStatus.Added or :
+        fullUpdateCause = "Untracked adding of investigation directory"
       
-      currentStartTime = time      
+      elif outStatus == EFSMetaItemStatus.Removed:
+        fullUpdateCause = "Untracked removing of investigation directory"
     
-    lastRange = TimeRange()
-    lastRange.begin = currentStartTime
-    lastRange.end = None
-    result.append(lastRange)
-
-  return result
-
-# raw_arguments : string[]
-def parseRanges(rawArguments):
-
-  if rawArguments == None:
-    return None
-
-  result = []
-
-  for rawArgument in rawArguments:
-    rangesFromArgument = parseRangesFromRawArgument(rawArgument)
-    if rangesFromArgument == None:
-      return None
+    else:
+      fullUpdateCause = "Investigation directory was unexisted"
+        
+    if fullUpdateCause != None:
     
-    result.extend(rangesFromArgument)
+      #TODO: For full update 
     
-  return result
-
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
- # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-
-def getFileNameWithoutExtension(file_in_path):
-  return os.path.basename(file_in_path).split('.')[0]
-
-def mkDirSafe(dir__path):
-  try:
-    os.mkdir(dir__path)
-    return True
-  except:
-    return False
-
-def rmDirSafe(dir__path):
-  try:
-    shutil.rmtree(dir__path)
-    return True
-  except:
-    return False
-
-# ================================ Actions with video
-
-class ExcludeFrames_Settings:
-  def __init__(self):
-    self.doCleanArgumentsFromInFile = True
-    self.doIncludeFileNameIntoFrames = False
-
-
-def timeDeltaToString(timeDelta, timeFormat = None):
-  if timeFormat == None:
-    return str(math.floor(timeDelta.total_seconds()))
-
-  timeFromZero = datetime.datetime.min + timeDelta
-  return timeFromZero.strftime(timeFormat)
-
-
-# >>> Markdown to text online editor
-# https://dillinger.io/
-# https://www.w3docs.com/nx/marked
-
-def excludeFrames(file__in__path, dir__out__path, framesRange, step, settings = ExcludeFrames_Settings()):
-
-  #TODO:
-  # 1. Create folders per range named as range
-  # 2. Create file with 
-
-  # Constants
-  file__log__nameAndExt = "log.txt"
-
-  # Prepare out naming
-  file__in__absPath = os.path.abspath(file__in__path)
-  file__in__name = getFileNameWithoutExtension(file__in__path)
-
-  outNaming = stringWithoutArguments(file__in__name) if settings.doCleanArgumentsFromInFile else file__in__name
-
-  # Prepare "outForResult" directory
-  
-  dir__out_result__absPath = os.path.join(dir__out__path, outNaming)
-  mkDirSafe(dir__out_result__absPath)
-  
-  # Prepare log file in the "outForResult" directory
-  file__out_result_log__absPath = os.path.join(dir__out_result__absPath, file__log__nameAndExt)
-  file__out_result_log__fileObject = open(file__out_result_log__absPath, 'a') 
-
-  # Get actual range info
-  hasBegin = (framesRange != None) and (framesRange.begin != None)
-  timeRange_defaultBegin = datetime.timedelta()
-  framesRange_actualBegin = framesRange.begin if hasBegin else timeRange_defaultBegin
-
-  hasEnd = (framesRange != None) and (framesRange.end != None) 
-  framesRange_actualEnd = datetime.timedelta()
-  if hasEnd:
-    framesRange_actualEnd = framesRange.end
-  else:
-    possibleVideoDuration = getVideoDuration(file__in__path)
-    if possibleVideoDuration == None:
       return
-    framesRange_actualEnd = possibleVideoDuration
+    
+    # If we got here - we know that "dir__investigationOut__meta"\
+    # has Changed status
+    
+        
+        
+    if dir__investigationOut__meta == None or\
+      dir__investigationOut__meta.getStatus() == EFSMetaItemStatus.Removed:
+    
+    
+    return [] 
 
-  # Convert to seconds format
-  framesRange_actualBegin__int = math.floor(framesRange_actualBegin.total_seconds())
-  framesRange_actualEnd__int = math.floor(framesRange_actualEnd.total_seconds())
-  
-  # Form frames
-  print("=== Start forming frames range [" ,\
-    str(framesRange_actualBegin__int) , " - " , str(framesRange_actualEnd__int) ,\
-    "] with step [" , step ,\
-    "] for video [" , outNaming , "]")
-  
-  for frameTimeSeconds in range(framesRange_actualBegin__int, framesRange_actualEnd__int, step):
-    frameTimeForProcess__string = str(frameTimeSeconds)
-
-    # Form name of the frame output file
-    file__out_result_frame__name = str(frameTimeSeconds)
-    if settings.doIncludeFileNameIntoFrames:
-      file__out_result_frame__name += "_" + outNaming
+  if status == EFSMetaItemStatus.Removed:
+    if dir__investigationOut__meta != None and\
+      dir__investigationOut__meta.getStatus() != EFSMetaItemStatus.Removed:
       
-    file__out_result_frame__nameAndExt = file__out_result_frame__name + "." + "png"
-    file__out_result_frame__path = os.path.join(dir__out_result__absPath, file__out_result_frame__nameAndExt)
-    
-    # Prepare arguments
-    #[0] Path to ffmpeg exec
-    execArguments = ["ffmpeg"]
-    
-    #[1] Name of the input file
-    execArguments.extend(["-i", file__in__absPath])
-    
-    #[2] Time of the frame to exclude
-    execArguments.extend(["-ss", frameTimeForProcess__string])
-
-    #[3] Mode of excluding: exclude one frame
-    execArguments.extend(["-frames:v", "1"])
-    
-    #[4] Name of the output file
-    execArguments.extend([ file__out_result_frame__path ])
-
-    # Call exec
-    
-    print("Forming frame for frame at [",\
-      timeDeltaToString(datetime.timedelta(seconds = frameTimeSeconds)),\
-      "]")
-    
-    subprocess.check_call(execArguments,\
-      stdout = file__out_result_log__fileObject,\
-      stderr = file__out_result_log__fileObject)
-    
-    file__out_result_log__fileObject.flush()
-    file__out_result_log__fileObject.write("============================================================\n")
-
-# ----------------------------------
-
-# return "datetime.timedelta"
-def getVideoDuration(file__in__path):
-  
-  execArguments = ["ffprobe"]
-  execArguments.extend(["-i", file__in__path])
-  execArguments.extend(["-show_entries"])
-  execArguments.extend(["format=duration"])
-  execArguments.extend([ "-of", "default=noprint_wrappers=1:nokey=1" ])
-
-  try:  
-    ffprobe__process = subprocess.run(execArguments, capture_output=True)
-  except:
-    return None
-  
-  if ffprobe__process.returncode != 0:
-    return None
-  
-  result_string = ffprobe__process.stdout.decode().strip()
-  result_float = 0.0
-  try:
-    result_float = float(result_string)
-  except:
-    return None
-  
-  return datetime.timedelta(seconds = math.floor(result_float))
+      # In was removed while out is exists. Remove output
+      rmDirSafe(dir__investigationOut__meta.getPath())
       
-# ================================= Settings
+      
+    #TODO: Make removing as kind of update type!
+    return []
 
-files__inIgnore__name = [".gitignore"]
+  elif status == EFSMetaItemStatus.Added:
+  
+    if dir__investigationOut__meta != None and\
+      dir__investigationOut__meta.getStatus() != EFSMetaItemStatus.Removed:
+  
+      # In was added - so no existing output is expected. Remove existing
+      # directory before update
+      rmDirSafe(dir__investigationOut__meta.getPath())
+  
+    result = []
+  
+    for fsItem__investigationIn_source__meta in dir__investigationIn__meta.items:
+    
+      settingsIn = formSourceSettingsForInputFSItem(fsItem__investigationIn_source__meta.getPath())
+      
+      if settingsIn == None:
+        #WARNING: Cannot create settings for source input
+        continue
+      
+      sourceUpdateSetting = OSINT_UpdateSettings_Investigation_Source(\
+        settingsIn, dir__investigationOut__path,\
+        shouldUpdate_sourceText = True, shouldUpdate_frames = True,\
+        updateCauseString = "Investigation added")
+      
+      result.append(sourceUpdateSetting)
+  
+    return result
+      
+  elif status == EFSMetaItemStatus.Changed:
+    #TODO: Find what items changed and how
+
+  else
+    #WARNING: Unsupported change status
+    return []
+
+
+
+
+
+
+def formInvestigationsUpdateSettings(dir__in__meta, dir__out__meta):
+  
+  dir__in__meta = dir__in__meta.rootDirs[0]
+  
+  result = []
+  
+  for fsItem__in_investigation__meta in dir__in__meta.items:
+    
+    if isinstance(fsItem__in_investigation__meta, FSMeta_file):
+      #WARNING: Unexpected file in investigations IN folder
+      # Just actualize info about it
+      continue
+
+    dir__in_investigation__meta = fsItem__in_investigation__meta
+    (dir__out_investigation__meta, dir__out_investigation__path) =\
+      getInvestigationMetaOutByIn(dir__in_investigation__meta, dir__out__meta)
+
+    #TODO: Pass output settings
+    sourceUpdateSettings = formSourcesUpdateSettings(\
+      dir__in_investigation__meta,\
+      dir__out_investigation__meta,\
+      dir__out_investigation__path)
+    
+    if updateSettings == None:
+      return None
+
+    if len(updateSettings) > 0:
+    
+      newInvestigationUpdateSettings = OSINT_UpdateSettings_Investigation(\
+        dir__in_investigation__meta.getName(), sourceUpdateSettings)
+    
+      result.append(newInvestigationUpdateSettings)
+
+  return result
+
+
+
+## ********************************************
+#
+##TODO:
+## 1. Print console out: print info about starting processing:
+##     - Investigation
+##     - Source
+##     - Range
+## 2. Print console out: time of processing the source
+## 3. Try to perform frames processing in separate processes
+#
+## ******************************************** ENTER POINT
+#
 dir__in__name = "in"
 dir__out__name = "out"
-step = 5
+dir__meta__name = "meta"
 
-# ================================= Utility call
+#Form "in" and "out" paths
+dir__in__path = os.path.join(getPathFromWhichProcessIsCalled(), dir__in__name)
+dir__out__path = os.path.join(getPathFromWhichProcessIsCalled(), dir__out__name)
 
-dir__current__path = os.getcwd()
-dir__in__path = os.path.join(dir__current__path, dir__in__name)
-dir__out__path = os.path.join(dir__current__path, dir__out__name)
+#Form "in" and "out" meta paths
+dir__meta__path = os.path.join(getPathFromWhichProcessIsCalled(), dir__meta__name)
+dir__meta_in__path = os.path.join(dir__meta__path, dir__in__name)
+dir__meta_out__path = os.path.join(dir__meta__path, dir__out__name)
 
-# Clear "out" directory
-rmDirSafe(dir__out__path)
-mkDirSafe(dir__out__path)
+#Load meta
+mkDirSafe(dir__meta__path)
+metaIn = loadOrMakeFSMeta(dir__meta_in__path, [dir__in__path])
+metaOut = loadOrMakeFSMeta(dir__meta_out__path, [dir__out__path])
 
-for fsItem__in_member__name in os.listdir(dir__in__path):
-  if fsItem__in_member__name in files__inIgnore__name:
-    continue
+#Form update settings
+#TODO:
+#
+#1. Find what should be updated
+# Source settings added / updated => make source AND frames
+# Content added / updated => make frames
+# Second priority:
+# Todo: Make system for getting input by output!
+# Source output changed => update source output only
+# Any frame changed =>update frames
+#
+#2. Form source forming settings based on this info
 
-  fsItem__in_member__path = os.path.join(dir__in__path, fsItem__in_member__name)
-    
-  if os.path.isdir(fsItem__in_member__path):
-    continue
-  file__in_member__path = fsItem__in_member__path
 
-  file__in_member__name = getFileNameWithoutExtension(file__in_member__path)
-  rawArguments = excludeRawArguments(file__in_member__name)
-  rangesToExclude = parseRanges(rawArguments)
 
-  if rangesToExclude != None:
-    for rangeToExclude in rangesToExclude:
-      excludeFrames(file__in_member__path, dir__out__path, rangeToExclude, step)
-  else:
-    excludeFrames(file__in_member__path, dir__out__path, None, step)
+
+
+#Perform
+#TODO: Call forming output
+
+#Save meta
+saveFSMeta(dir__meta_in__path, metaIn)
+saveFSMeta(dir__meta_out__path, metaOut)
+
+#for dir__in_investigation__path in getInvestigationsPathsInDir(dir__in__path):
+#  formInvestigationOutput(dir__in_investigation__path, dir__out__path)
