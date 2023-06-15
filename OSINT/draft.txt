@@ -1,0 +1,253 @@
+
+
+
+
+
+# SETTINGS ###
+
+# ############
+
+
+files__inIgnore__name = [".gitignore"]
+for fsItem__in_possibleSource__name in os.listdir(dir__in__path):
+  if fsItem__in_possibleSource__name in files__inIgnore__name:
+    continue
+
+  fsItem__in_possibleSource__path = os.path.join(dir__in__path, fsItem__in_possibleSource__name)
+
+    
+
+  #vars(settings)
+  print("SETTINGS: " , vars(settings))
+
+# ================================== Source lines test ============================================
+
+name = "@124@ Как дагестанские женщины сопротивляются призыву мужчин - Copy"
+contentPath = "E:\\Programming\\Space\\OSINT\\in\\1\\@124@ Как дагестанские женщины сопротивляются призыву мужчин - Copy.mp4"
+sourceURL = "https://www.youtube.com/watch?v=l85f8BoFdw0"
+backupURL = "https://drive.google.com/file/d/1LxGG6gK-pikxvdNiZyvxnUr2NVoKqglG"
+cutTimes = [\
+  datetime.timedelta(seconds=4),\
+  datetime.timedelta(seconds=37),\
+  datetime.timedelta(seconds=61),\
+  datetime.timedelta(seconds=541)\
+]
+
+settings = SETSourceSettings(sourceURL, backupURL, cutTimes)
+settings.name = name
+settings.contentPath = contentPath
+
+print("*****************************{{{")
+for line in formSourceLines(settings):
+  print(line)
+print("*****************************}}}")
+
+# ================================== Frames forming test ============================================
+
+formSourceRangeFrames(settings.contentPath, dir__out__path,\
+  datetime.timedelta(seconds=35),\
+  datetime.timedelta(seconds=70), 10)
+ 
+
+
+
+
+
+#import shutil
+#import math
+#import datetime
+
+
+# For file actions
+
+
+# For executable call
+#import subprocess
+
+
+
+
+
+
+#from osint_fileUtils import openTextFileForRead
+#from osint_fileUtils import isTextFile
+
+#from osint_stringUtils import stringBetween
+
+#from osint_timeUtils import timeDeltaToString
+
+
+
+def parseTime(string):
+
+  # Special case for seconds single value
+
+  try:
+    seconds__int = int(string)
+    return datetime.timedelta(seconds = seconds__int)
+  except:
+    # No return here - because this may be other format
+    pass
+
+  # Parse using time patterns
+  members = string.split(":")
+  
+  membersNum = len(members)  
+  if membersNum <= 1:
+     return None
+  elif membersNum <= 3:
+    try: # Catch int casting problems
+      return datetime.timedelta(\
+        seconds = int(members[0]),\
+        minutes = int(members[1]),\
+        hours = int(members[2]) if membersNum == 3 else 0)
+    except:      
+      pass  
+  
+  return None
+
+
+
+
+
+
+
+def formSettingsForInputDir(dir__in_source__path):
+
+  for fsItem__in_source_member__name in os.listdir(dir__in_source__path):
+    
+    try:
+    with open(filename, "r") as f:
+        for l in f:
+             process_line(l)
+except UnicodeDecodeError:
+    pass # Fond non-text data
+    
+    
+
+
+
+
+============================== FILE NAME ARGUMENTS
+
+def excludeRawArguments(stringWithPossibleArguments):
+  argumentsStart = stringWithPossibleArguments.find('@')
+  
+  if argumentsStart == -1:
+    return None
+  
+  argumentsEnd = stringWithPossibleArguments.find('@', argumentsStart + 1)
+  if argumentsEnd == -1:
+    return None
+
+  argumentsString = stringWithPossibleArguments[argumentsStart+1:argumentsEnd]
+  
+  unstrippedRawArguments = argumentsString.split('_')
+  return [unstrippedRawArgument.strip() for unstrippedRawArgument in unstrippedRawArguments]
+
+def stringWithoutArguments(stringWithPossibleArguments):
+  
+  #Just find first "@" symbols
+  argumentsStart = stringWithPossibleArguments.find('@')
+  if argumentsStart == -1:
+    return stringWithPossibleArguments
+  
+  argumentsEnd = stringWithPossibleArguments.find('@', argumentsStart + 1)
+  if argumentsStart == -1:
+    return stringWithPossibleArguments
+  
+  return stringWithPossibleArguments[argumentsEnd+1:len(stringWithPossibleArguments)].lstrip()
+
+============================== SOMETHING NOT WORKING PARSE TIME METHOD
+
+def parseTime(string):
+
+  # Special case for seconds single value
+
+  try:
+    seconds__int = int(string)
+    return datetime.timedelta(seconds = seconds__int)
+  except:
+    # No return here - because this may be other format
+    pass
+
+  # Parse using time patterns
+  supported_patterns = ["^%-M:%-S"]
+  for supported_pattern in supported_patterns:
+      try:
+        result__datetime_time = datetime.datetime.strptime(string, supported_pattern)
+        return datetime.timedelta(\
+          hours = result__datetime_time.hour,\
+          minutes = result__datetime_time.minute,\
+          seconds = result__datetime_time.second)
+      except:
+          pass
+  
+  return None
+
+
+============================== RANGES PARSING
+
+class TimeRange:
+  def __init__(self):
+    self.begin = None  # assumed to be "datetime.timedelta"
+    self.end = None    # assumed to be "datetime.timedelta" 
+
+# ------------------------------
+# Constructs range from string
+#
+# [string : string]
+#   string to parse value from
+#
+# [{ret} : IntRange]
+#   range if it was succefully
+#   created or "None" otherwise
+# ------------------------------
+def parseRangesFromRawArgument(rawArgument):
+
+  rangeDelimiterSymbol = '-'
+
+  result = []
+  
+  if rangeDelimiterSymbol in rawArgument:
+    # We assume that this is single-range argument
+
+    possibleRangeLimitStrings = string.split('-')
+    if len(possibleRangeLimitStrings) != 2:
+      return None
+    
+    possibleBegin = parseTime(possibleRangeLimitStrings[0].strip())
+    if possibleBegin == None:
+      return None
+            
+    possibleEnd = parseTime(possibleRangeLimitStrings[1].strip())
+    if possibleEnd == None:
+      return None    
+    
+    singleRange = TimeRange()
+    singleRange.begin = possibleBegin
+    singleRange.end = possibleEnd
+    result.append(singleRange)
+    
+  else:
+
+
+  return result
+
+# raw_arguments : string[]
+def parseRanges(rawArguments):
+
+  if rawArguments == None:
+    return None
+
+  result = []
+
+  for rawArgument in rawArguments:
+    rangesFromArgument = parseRangesFromRawArgument(rawArgument)
+    if rangesFromArgument == None:
+      return None
+    
+    result.extend(rangesFromArgument)
+    
+  return result
+

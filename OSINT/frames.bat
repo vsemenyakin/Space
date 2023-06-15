@@ -1,1 +1,1 @@
-"..\_\Portable Python-3.10.5 x64\App\Python\python.exe" "frames.py"
+"..\_\python\Portable Python-3.10.5 x64\App\Python\python.exe" "..\_\python\OSINT\frames.py"
