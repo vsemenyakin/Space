@@ -3,7 +3,12 @@ import shutil
 from enum import Enum
 
 import osint_pathUtils
-    
+
+#For isLink
+import pylnk3
+
+# -------------------------------------
+
 def mkDirSafe(dir__path):
   try:
     os.mkdir(dir__path)
@@ -114,3 +119,25 @@ def listDir(dir__path,\
     result = [os.path.join(dir__path, resultElement) for resultElement in result]
 
   return result
+  
+# ------------------------------
+
+def getLinkPath(path):
+
+  try:
+    lnk = pylnk3.Lnk(path)
+    return lnk.path
+  
+  except Exception as exception:
+    return None
+
+def isLink(path):
+  #Based on [https://github.com/strayge/pylnk]
+  
+  try:
+    lnk = pylnk3.Lnk(path)
+    return True
+    
+  except Exception as exception:
+    print(exception)
+    return False
