@@ -1,4 +1,4 @@
-from osint_utils import indexOfOneOf
+from osint_stringUtils import indexOfOneOf
 from enum import Enum
 
 class ParseResult(Enum):

@@ -4,6 +4,8 @@ from enum import Enum
 
 import osint_pathUtils
 
+from osint_stringUtils import findMatchedSubstring
+
 #For isLink
 import pylnk3
 
@@ -141,3 +143,13 @@ def isLink(path):
   except Exception as exception:
     print(exception)
     return False
+
+# ------------------------------
+
+def findDirMember(dir__path, possibleNames, matchCase = False, returnPath = True):
+
+  for fsItem__dir_item__name in listDir(dir__path, ListDir_SortRule.DontSort, returnPaths = False):
+    if findMatchedSubstring(fsItem__dir_item__name, possibleNames):
+      return os.path.join(dir__path, fsItem__dir_item__name) if returnPath else fsItem__dir_item__name
+
+  return None
