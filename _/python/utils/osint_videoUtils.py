@@ -30,7 +30,7 @@ def getVideoDuration(file__in__path):
 
 def excludeFrames(file__in__path, file__out__path, frameTime, log__fileObject = None):
 
-  frameTime_int = int(frameTime.total_seconds())
+  frameTime_float = frameTime.total_seconds()
 
   # Prepare arguments
   #[0] Path to ffmpeg exec
@@ -40,7 +40,7 @@ def excludeFrames(file__in__path, file__out__path, frameTime, log__fileObject = 
   execArguments.extend(["-i", file__in__path])
 
   #[2] Time of the frame to exclude
-  execArguments.extend(["-ss", str(frameTime_int)])
+  execArguments.extend(["-ss", str(frameTime_float)])
   
   #[3] Mode of excluding: exclude one frame
   execArguments.extend(["-frames:v", "1"])

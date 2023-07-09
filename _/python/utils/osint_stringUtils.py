@@ -1,5 +1,5 @@
 
-def getStringBetween(main, start, end):
+def getStringBetween(main, start, end, trimmed = False):
 
   startIndexBegin = main.find(start)
   if startIndexBegin == -1:
@@ -7,14 +7,14 @@ def getStringBetween(main, start, end):
   startIndex = startIndexBegin + len(start)
   
   if end == None:
-    return main[startIndex:]
+    return main[startIndex:].strip()
   
   startIndexWithoutOffset = main[startIndex:].find(end)
   if startIndexWithoutOffset == -1:
     return None
   endIndex = startIndex + startIndexWithoutOffset
   
-  return main[startIndex:endIndex]
+  return main[startIndex:endIndex].strip()
   
 def insertStringBetween(main, start, end, stringToInsert):
 
@@ -43,9 +43,9 @@ def indexOfOneOf(string, symbols):
 
   return -1
 
-def findMatchedSubstring(string, possibleSubstrings, caseSensitive = False):
+def findMatchedSubstring(string, possibleSubstrings, matchCase = False):
 
-  if caseSensitive:
+  if matchCase:
 
     for possibleSubstring in possibleSubstrings:
       index = string.find(possibleSubstring)

@@ -9,8 +9,10 @@ from osint_URLUtils import tryMakeTimestampedURL
 from osint_URLUtils import makeURLUnclickableForMarkdown
 
 from osint_timeUtils import timeDeltaToString
+
 from osint_fileUtils import mkDirSafe
 from osint_fileUtils import rmDirSafe
+from osint_fileUtils import openTextFileForWrite
 
 from osint_videoUtils import excludeFrames
 
@@ -20,6 +22,9 @@ from osint_profiling import getSimpleProfiler
 
 from osint_pathUtils import getFSItemName
 from osint_pathUtils import getPathWithoutLastMember
+
+from osint_sourceSettings_in import SETMatchingSettings_ContentMoment
+from osint_sourceSettings_in import SETMatchingSettings_Link
 
 # ================================ Frames =========================================
 
@@ -83,6 +88,9 @@ def formSourceRangeFrames_getTimeFormat_forFrame():
 
 def formSourceRangeFrames_getTimeFormat_forSourceText():
   return "%M:%S"
+
+def formSourceRangeFrames_getTimeFormat_forMatchingFrame():
+  return "%M_%S.%f"
 
 # - - - - - - - - - - - - - - - - - - Private details - - - - - - - - - - - - - - - - - - 
 
@@ -165,65 +173,37 @@ def formSourceText_range(startTime, endTime, contentURL, backupURL):
 
 # ================================ Matchings =========================================
 
-def formMatching_getMatchingDirPath(dir__out__path, matchingName):
-  return os.path.join(dir__out__path, matchingName)
+def formMatching_getMatchingMemberDirPath_ContentMoment(dir__matching_out__path, contentMoment):
 
-def formMatching_getLogFilePath(dir__out__path, matchingName):
-  dir__out_matching__path = formMatching_getMatchingDirPath(dir__out__path, matchingName)
-  return os.path.join(dir__out_matching__path, "log.txt")
+  timeSting = timeDeltaToString(contentMoment.time, formSourceRangeFrames_getTimeFormat_forMatchingFrame())
+  outName = getFSItemName(getPathWithoutLastMember(contentMoment.path), False)
+  dir__matching_member_out__name = "[" + timeSting + "]" + " " + outName
 
-def formMatching_getOutFilePath(dir__out__path, in_time, file__in_content__path, matchingName):
+  return os.path.join(dir__matching_out__path, dir__matching_member_out__name)
 
-  timeSting = timeDeltaToString(in_time, formSourceRangeFrames_getTimeFormat_forFrame())
-  outName = getFSItemName(getPathWithoutLastMember(file__in_content__path), False)
-  file__out_matching_frame__name = "[" + timeSting + "]" + " " + outName + "." + "png"
+def formMatchingMemberOutput_ContentMoment(contentMoment, dir__matching_out__path):
 
-  dir__out_matching__path = formMatching_getMatchingDirPath(dir__out__path, matchingName)
-  return os.path.join(dir__out_matching__path, file__out_matching_frame__name)
+  dir__matching_member_out__path = formMatching_getMatchingMemberDirPath_ContentMoment(dir__matching_out__path, contentMoment)
 
-def formMatching(matchingName,\
-  file__in_contentA__path, in_timeA,\
-  file__in_contentB__path, in_timeB,\
-  dir__out__path):
+  rmDirSafe(dir__matching_member_out__path)
+  mkDirSafe(dir__matching_member_out__path)
 
-  getScopedPrinter().print("Forming image frames for matching [{matchingName}]".format(\
-    matchingName = matchingName)\
-  )
+  #- Heading actions
+  # Preparing log file
+  file__matching_member_log_out__fileObject = open(os.path.join(dir__matching_member_out__path, "log.txt"), 'a')  
+
+  getScopedPrinter().print("Forming frame image for [{name}] frame moment matching member".format(
+    name = getFSItemName(contentMoment.captionName))\
+  )  
   getScopedPrinter().scopeIn()
-
-  dir__out_matching__path = formMatching_getMatchingDirPath(dir__out__path, matchingName)
-
-  rmDirSafe(dir__out_matching__path)
-  mkDirSafe(dir__out_matching__path)
-
-  #TODO: Prepare log file!
-  file__out_log__fileObject = open(\
-    formMatching_getLogFilePath(dir__out__path, matchingName), 'a')  
-
-  # Heading actions
 
   getSimpleProfiler().start("MatchingFramesForming")
   
-  # Form frame for the A
-  outPath = formMatching_getOutFilePath(dir__out__path, in_timeA, file__in_contentA__path, matchingName)
-
-  getScopedPrinter().print("Forming frame image for [{name}]".format(
-    name = getFSItemName(outPath, False))\
-  )  
+  # Form frame
+  file__matching_member_frame_out__path = os.path.join(dir__matching_member_out__path, "frame.png")
   
-  excludeFrames(file__in_contentA__path, outPath, in_timeA, file__out_log__fileObject)  
-
-  file__out_log__fileObject.flush()  
-  file__out_log__fileObject.write("============================================================\n")
-
-  # Form frame for the B
-  outPath = formMatching_getOutFilePath(dir__out__path, in_timeB, file__in_contentB__path, matchingName)
-
-  getScopedPrinter().print("Forming frame image for [{name}]".format(
-    name = getFSItemName(outPath, False))\
-  )
-
-  excludeFrames(file__in_contentB__path, outPath, in_timeB, file__out_log__fileObject)
+  excludeFrames(contentMoment.path, file__matching_member_frame_out__path, contentMoment.time,\
+    file__matching_member_log_out__fileObject)  
 
   # Footing actions
 
@@ -234,3 +214,74 @@ def formMatching(matchingName,\
 
   getScopedPrinter().scopeOut()
 
+def formMatching_getMatchingMemberDirPath_Link(dir__matching_out__path, link):
+  return os.path.join(dir__matching_out__path, link.name)
+
+def createBatch_openURL(file__batch__path, URL):
+  #TODO: Support cross-platform script
+
+  openURLBatchCommand = "explorer"  
+     
+  file__output_source_lines__fileObject = openTextFileForWrite(file__batch__path)
+  if file__output_source_lines__fileObject == None:
+    return False
+  
+  file__output_source_lines__fileObject.write(openURLBatchCommand + " " + "\"" + URL + "\"")
+  return True
+
+def createBatch_copyURLMarkdown(file__batch__path, URLName, URL):
+  #TODO: Support cross-platform script
+
+  openURLBatchCommand = "echo"  
+  openURLBatchFinisher = "|clip"
+  
+  textToCopy = "[" + URLName + "](" + URL + ")"
+  
+  file__output_source_lines__fileObject = openTextFileForWrite(file__batch__path)
+  if file__output_source_lines__fileObject == None:
+    return False
+  
+  file__output_source_lines__fileObject.write(openURLBatchCommand + " " + textToCopy + openURLBatchFinisher)
+  return True
+
+def formMatchingMemberOutput_Link(link, dir__matching_out__path):
+
+  dir__matching_member_out__path = formMatching_getMatchingMemberDirPath_Link(dir__matching_out__path, link)
+
+  rmDirSafe(dir__matching_member_out__path)
+  mkDirSafe(dir__matching_member_out__path)
+
+  #- Heading actions
+  # Preparing log file
+  getScopedPrinter().print("Forming batch files for [{name}] link matching member".format(
+    name = getFSItemName(link.captionName))\
+  )  
+  getScopedPrinter().scopeIn()
+  
+  #NB: Forming bat files should not take a lot of time - so no profiling is needed
+  
+  #Perform actions
+  #-Create open batch
+  file__matching_member_openBatch_out__path = os.path.join(dir__matching_member_out__path, "open.bat")
+  isBatchCreated = createBatch_openURL(file__matching_member_openBatch_out__path, link.URL)
+  if not isBatchCreated:
+    getScopedPrinter().printAndScopeOut("ERROR: Cannot open text file for forming \"open.bat\"")
+
+  #-Create copy batch
+  file__matching_member_copyBatch_out__path = os.path.join(dir__matching_member_out__path, "copy.bat")
+  isBatchCreated = createBatch_copyURLMarkdown(file__matching_member_copyBatch_out__path, link.name, link.URL)
+  if not isBatchCreated:
+    getScopedPrinter().printAndScopeOut("ERROR: Cannot open text file for forming \"copy.bat\"")
+   
+  # Footing actions
+  getScopedPrinter().scopeOut()
+
+def formMatchingMemberOutput(member, dir__out_matching__path):
+  
+  if isinstance(member, SETMatchingSettings_ContentMoment):
+    formMatchingMemberOutput_ContentMoment(member, dir__out_matching__path)
+  elif isinstance(member, SETMatchingSettings_Link):
+    formMatchingMemberOutput_Link(member, dir__out_matching__path)
+  else:
+    #UNKNOWN type
+    pass

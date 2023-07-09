@@ -10,6 +10,7 @@ from osint_fileUtils import listDir
 from osint_fileUtils import ListDir_SortRule
 from osint_fileUtils import isLink
 from osint_fileUtils import getLinkPath
+from osint_fileUtils import isFileNamedAs
 
 from osint_argumentsParsing import parseArguments
 from osint_argumentsParsing import ArgumentParser_Named
@@ -22,6 +23,7 @@ from osint_pathUtils import getFSItemName
 from osint_videoUtils import getVideoDuration
 
 from osint_stringUtils import getStringBetween
+from osint_stringUtils import findMatchedSubstring
 
 # ==================================
 
@@ -303,22 +305,32 @@ def getPossibleSourceSettingsAndContentPathsForInputFSItem(fsItem__in_source__pa
 class SETMatchingSettings_ContentMoment:
 
   # "time" is expected as "datetime.timedelta"
-  def __init__(self, path, time):
+  def __init__(self, path, time, captionName):    
     self.path = path
     self.time = time
+    
+    self.captionName = captionName
+
+class SETMatchingSettings_Link:
+
+  # "time" is expected as "datetime.timedelta"
+  def __init__(self, name, URL, captionName): 
+    self.name = name
+    self.URL = URL
+    
+    self.captionName = captionName
 
 class SETMatchingSettings:
 
-  # argument_strings: string[]
-  def __init__(self, name, contentMomentA, contentMomentB):
+  # members: { "..._ContentMoment" or "..._URLLink" }[]
+  def __init__(self, name, members):
     self.name = name
   
-    self.contentMomentA = contentMomentA
-    self.contentMomentB = contentMomentB
+    self.members = members
     
-def formMatchingSettingsForInputFSItem_formContentMoment(link__matching__path):
+def formMatchingSettingsForInputFSItem_formMember_contentMoment(link__moment__path):
   
-  fsItem__matchingLinkedItem__path = getLinkPath(link__matching__path)
+  fsItem__matchingLinkedItem__path = getLinkPath(link__moment__path)
 
   # Get content path
   path = None
@@ -336,43 +348,73 @@ def formMatchingSettingsForInputFSItem_formContentMoment(link__matching__path):
 
   # Get time moment
 
-  fsItem__matchingLinkedItem__name = getFSItemName(link__matching__path)
+  fsItem__matchingLinkedItem__name = getFSItemName(link__moment__path)
   
   possibleTimeString = getStringBetween(fsItem__matchingLinkedItem__name, '[' , ']')
   time = parseTime(possibleTimeString)
 
-  return SETMatchingSettings_ContentMoment(path, time)
+  return SETMatchingSettings_ContentMoment(path, time, getFSItemName(fsItem__matchingLinkedItem__path))
 
 
+def formMatchingSettingsForInputFSItem_formMember_link(name, openedFileObject, captionName):
+  #NOTE: All lines are concated as URL, concated WITHOUT ant delimiter
+  URLString = "".join([line for line in openedFileObject])
+  
+  return SETMatchingSettings_Link(name, URLString, captionName)
+
+def formMatchingSettingsForInputFSItem_formMember(fsItem__matching_member__path):
+
+  #Constants
+  possibleLinkKindNames = ["Ссылка", "Link"]
+
+  #Logic
+  if isLink(fsItem__matching_member__path):
+    link__matching_member__path = fsItem__matching_member__path  
+    return formMatchingSettingsForInputFSItem_formMember_contentMoment(link__matching_member__path)
+    
+  elif os.path.isfile(fsItem__matching_member__path):
+    file__matching_member__path = fsItem__matching_member__path
+    file__matching_member__name = getFSItemName(fsItem__matching_member__path, False)
+    
+    if not isTextFile(file__matching_member__path):
+      #WARNING: Only text files may be used as not-link objects
+      return None
+    
+    fileObjectKind = getStringBetween(file__matching_member__name, '[', ']', True)
+    if fileObjectKind == None:
+      #WARNING: Unkinded files are not supported
+      return None
+        
+    fileObjectName = getStringBetween(file__matching_member__name, ']', None, True)
+  
+    if findMatchedSubstring(fileObjectKind, possibleLinkKindNames):
+      return formMatchingSettingsForInputFSItem_formMember_link(\
+        fileObjectName,\
+        openTextFileForRead(file__matching_member__path),\
+        fileObjectName)
+
+    #WARNING: Unknown file object kind  
+    return None
+    
+  else:
+    #Looks like director... Warning.
+    #Currently dirs is not used for members setup
+    return None
+    
 def formMatchingSettingsForInputFSItem(fsItem__matching__path):
 
-  if os.path.isfile(fsItem__matching__path) or os.path.islink(fsItem__matching__path):
-    #ERROR: Cannot parse file as matching
+  if not os.path.isdir(fsItem__matching__path):
+    #ERROR: Matching should be presented as dir!
     return None
   dir__matching__path = fsItem__matching__path
 
-  contentMomentA = None
-  contentMomentB = None
+  members = []
 
-  for fsItem__matching_item__path in listDir(dir__matching__path, ListDir_SortRule.DontSort):
+  for fsItem__matching_member__path in listDir(dir__matching__path, ListDir_SortRule.DontSort):
+    member = formMatchingSettingsForInputFSItem_formMember(fsItem__matching_member__path)
+    if member != None:
+      members.append(member)   
    
-    if not isLink(fsItem__matching_item__path):
-      #WARNING: Unknown matching folder member
-      # Currently 
-      continue
-    link__matching_item__path = fsItem__matching_item__path  
-
-    contentMoment = formMatchingSettingsForInputFSItem_formContentMoment(link__matching_item__path)
-    if contentMoment == None:
-      #ERROR: Cannot create content moment from link
-      return None
-
-    if contentMomentA == None:
-      contentMomentA = contentMoment
-    elif contentMomentB == None:
-      contentMomentB = contentMoment
-      break
-
   name = getFSItemName(dir__matching__path)
 
-  return SETMatchingSettings(name, contentMomentA, contentMomentB)
+  return SETMatchingSettings(name, members)

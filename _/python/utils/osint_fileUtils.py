@@ -146,10 +146,13 @@ def isLink(path):
 
 # ------------------------------
 
+def isFileNamedAs(fileName, possibleNames, matchCase = False):
+  return findMatchedSubstring(fileName, possibleNames, matchCase)
+
 def findDirMember(dir__path, possibleNames, matchCase = False, returnPath = True):
 
   for fsItem__dir_item__name in listDir(dir__path, ListDir_SortRule.DontSort, returnPaths = False):
-    if findMatchedSubstring(fsItem__dir_item__name, possibleNames):
+    if isFileNamedAs(fsItem__dir_item__name, possibleNames):
       return os.path.join(dir__path, fsItem__dir_item__name) if returnPath else fsItem__dir_item__name
 
   return None

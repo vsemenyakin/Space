@@ -8,13 +8,16 @@ def parseTime_tryParseWithDelimiter(string, delimiter):
   if membersNum <= 1:
      return None
   elif membersNum <= 3:
-    try: # Catch int casting problems 
+    try: # Catch "float" from "strings" casting problems 
       members.reverse()
        
-      return datetime.timedelta(\
+      resultTime = datetime.timedelta(\
         seconds = float(members[0]),\
         minutes = float(members[1]),\
         hours = float(members[2]) if membersNum == 3 else 0)
+        
+      return resultTime
+        
     except:      
       pass
 
@@ -24,8 +27,8 @@ def parseTime(string):
   # Special case for seconds single value
 
   try:
-    seconds__int = int(string)
-    return datetime.timedelta(seconds = seconds__int)
+    seconds__float = float(string)
+    return datetime.timedelta(seconds = seconds__float)
   except:
     # No return here - because this may be other format
     pass
@@ -44,5 +47,10 @@ def timeDeltaToString(timeDelta, timeFormat = None):
     return str(math.floor(timeDelta.total_seconds()))
 
   timeFromZero = datetime.datetime.min + timeDelta
-  return timeFromZero.strftime(timeFormat)
+  
+  if timeFormat[-2:] == "%f":
+    # Trim last three symbols for miliseconds
+    return timeFromZero.strftime(timeFormat)[:-3]
+  else:
+    return timeFromZero.strftime(timeFormat)
 

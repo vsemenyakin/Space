@@ -25,7 +25,7 @@ from osint_sourceSettings_in import isPathMarkedForSkipping
 
 from osint_sourceSettings_out import formSourceLines
 from osint_sourceSettings_out import formSourceRangeFrames
-from osint_sourceSettings_out import formMatching
+from osint_sourceSettings_out import formMatchingMemberOutput
 
 from osint_pathUtils import getPathFromWhichProcessIsCalled
 from osint_pathUtils import getFSItemName
@@ -186,7 +186,7 @@ def formMatchingOutput(fsItem__in___path, dir__output__path):
     return
 
   #Header actions
-  getScopedPrinter().print("Forming source [{name}] data".format(\
+  getScopedPrinter().print("Forming matching [{name}] data".format(\
     name = getFSItemName(fsItem__in___path)))
   getScopedPrinter().scopeIn()  
     
@@ -196,11 +196,13 @@ def formMatchingOutput(fsItem__in___path, dir__output__path):
     getScopedPrinter().printAndScopeOut("ERROR: Invalid settings provided")
     return False    
 
-  formMatching(\
-    settings.name,\
-    settings.contentMomentA.path, settings.contentMomentA.time,\
-    settings.contentMomentB.path, settings.contentMomentB.time,\
-    dir__output__path)
+  dir__output_matching__path = os.path.join(dir__output__path, settings.name)
+
+  rmDirSafe(dir__output_matching__path)
+  mkDirSafe(dir__output_matching__path)
+
+  for member in settings.members:
+    formMatchingMemberOutput(member, dir__output_matching__path)
 
   #Footer actions
   getScopedPrinter().scopeOut()
