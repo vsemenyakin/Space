@@ -141,7 +141,7 @@ def isLink(path):
     return True
     
   except Exception as exception:
-    print(exception)
+    #print(exception)
     return False
 
 # ------------------------------
