@@ -66,3 +66,52 @@ def findMatchedSubstring(string, possibleSubstrings, matchCase = False):
       return possibleSubstring
 
   return None
+  
+#Batch escapes  
+#TODO: Move to file like "winBatchUtils"
+#
+#Based on:
+# 1. [https://ss64.com/nt/syntax-esc.html]
+#
+#Links that was used, but not helped:
+# 1. [https://stackoverflow.com/a/33868784]
+# 2. [https://www.robvanderwoude.com/escapechars.php]
+
+
+def batchStringEscaping_forEchoCommand(string, escapeOnlyThisSymbols = None):
+
+  resultString = ""
+
+  percentEscapedSymbols = "%"
+  oneUpArrowEscapedSymbols = "^"
+  threeUpArrowsEscapedSymbols = "&<>|'`,;=()!\"\\[].*?"
+
+  for char in string:
+    if escapeOnlyThisSymbols != None and (not char in escapeOnlyThisSymbols):
+      resultString = resultString + char
+    elif char in percentEscapedSymbols:
+      resultString = resultString + "%" + char
+    elif char in oneUpArrowEscapedSymbols:
+      resultString = resultString + "^" + char
+    elif char in threeUpArrowsEscapedSymbols:
+      resultString = resultString + "^^^" + char
+    else:
+      resultString = resultString + char
+
+  return resultString
+
+def batchStringEscaping_forString(string, escapeOnlyThisSymbols = None):
+
+  resultString = ""
+
+  percentEscapedSymbols = "%"
+
+  for char in string:
+    if escapeOnlyThisSymbols != None and (not char in escapeOnlyThisSymbols):
+      resultString = resultString + char
+    elif char in percentEscapedSymbols:
+      resultString = resultString + "%" + char
+    else:
+      resultString = resultString + char
+      
+  return resultString

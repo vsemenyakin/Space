@@ -26,6 +26,9 @@ from osint_pathUtils import getPathWithoutLastMember
 from osint_sourceSettings_in import SETMatchingSettings_ContentMoment
 from osint_sourceSettings_in import SETMatchingSettings_Link
 
+from osint_stringUtils import batchStringEscaping_forEchoCommand
+from osint_stringUtils import batchStringEscaping_forString
+
 # ================================ Frames =========================================
 
 def formSourceRangeFrames(in_content__path, dir__out__path, rangeStart, rangeEnd, step):
@@ -226,7 +229,8 @@ def createBatch_openURL(file__batch__path, URL):
   if file__output_source_lines__fileObject == None:
     return False
   
-  file__output_source_lines__fileObject.write(openURLBatchCommand + " " + "\"" + URL + "\"")
+  file__output_source_lines__fileObject.write(openURLBatchCommand + " " +\
+     "\"" + batchStringEscaping_forString(URL) + "\"")
   return True
 
 def createBatch_copyURLMarkdown(file__batch__path, URLName, URL):
@@ -241,7 +245,9 @@ def createBatch_copyURLMarkdown(file__batch__path, URLName, URL):
   if file__output_source_lines__fileObject == None:
     return False
   
-  file__output_source_lines__fileObject.write(openURLBatchCommand + " " + textToCopy + openURLBatchFinisher)
+  file__output_source_lines__fileObject.write(openURLBatchCommand + " " +\
+     batchStringEscaping_forEchoCommand(textToCopy) +\
+     openURLBatchFinisher)
   return True
 
 def formMatchingMemberOutput_Link(link, dir__matching_out__path):
