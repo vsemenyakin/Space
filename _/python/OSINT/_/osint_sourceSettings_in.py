@@ -99,9 +99,9 @@ def parseSETSourceSettings(arguments):
   argumentNames_source =\
     ["ссылка", "link",\
      "источник", "source",\
-     "адресс", "address",\
+     "адресс", "address", "adress", "adres",\
      "ссылка на источник", "source link",\
-     "URL источника", "sourceURL"]
+     "URL источника", "source URL", "sourceURL"]
 
   parseSETSourceSettings.sourceURL = None
   def resultAction_setSource(value):
@@ -111,9 +111,9 @@ def parseSETSourceSettings(arguments):
   
   # Form backupURL parser
   argumentNames_backup =\
-    ["бэкап", "backup",\
-     "ссылка на бэкап", "backup link"
-     "URL бэкапа", "backup URL"]
+    ["бэкап", "бекап", "backup",\
+     "ссылка на бэкап", "ссылка на бекап", "backup link"
+     "URL бэкапа", "URL бекапа", "backup URL"]
   
   parseSETSourceSettings.backupURL = None
   def resultAction_setBackup(value):
