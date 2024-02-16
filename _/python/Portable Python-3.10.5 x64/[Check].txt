@@ -1,0 +1,11 @@
+Based on Portable Python build [https://sourceforge.net/projects/portable-python/]
+Download URL: [https://sourceforge.net/projects/portable-python/files/latest/download]
+
+===|CHANGES|===
+
+{!No changes!}
+
+===|TODO|===
+
+- Make more compact Python VM build
+- Add additional details

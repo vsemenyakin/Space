@@ -1,10 +1,15 @@
 import subprocess
 import datetime
 import math
+import pathlib
+
+def getFFMPEGDirPath():
+
+  return pathlib.Path(__file__).parent.parent.parent / "ffmpg" / "bin"
 
 def getVideoDuration(file__in__path):
   
-  execArguments = ["ffprobe"]
+  execArguments = [str(getFFMPEGDirPath() / "ffprobe")]
   execArguments.extend(["-i", file__in__path])
   execArguments.extend(["-show_entries"])
   execArguments.extend(["format=duration"])
@@ -34,7 +39,9 @@ def excludeFrames(file__in__path, file__out__path, frameTime, log__fileObject = 
 
   # Prepare arguments
   #[0] Path to ffmpeg exec
-  execArguments = ["ffmpeg"]
+  execArguments = [str(getFFMPEGDirPath() / "ffmpeg")]
+  
+  print(execArguments[0])
   
   #[1] Name of the input file
   execArguments.extend(["-i", file__in__path])
